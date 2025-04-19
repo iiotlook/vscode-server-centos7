@@ -1,0 +1,40 @@
+name: Release
+run-name: Release
+on:
+  workflow_dispatch:
+jobs:
+  Build:
+    uses: ./.github/workflows/ci.yml
+  Make-Release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    needs: Build
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: recursive
+      - name: Get product version
+        run: |
+          echo "prod_version=$(cat version.txt)" >> $GITHUB_ENV
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ github.workspace }}/dist
+      - name: Reorganize files
+        run: |
+          mv dist/*/*.tar.gz dist/
+          rm -rf dist/*/
+      - name: Make a tag
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -a '${{ env.prod_version }}' -m '${{ env.prod_version }}'
+          git push origin '${{ env.prod_version }}'
+      - name: Make a release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          gh release create --title 'v${{ env.prod_version }}' --notes '' --verify-tag '${{ env.prod_version }}' dist/*.tar.gz

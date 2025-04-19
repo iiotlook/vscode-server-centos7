@@ -1,0 +1,32 @@
+name: CI
+run-name: CI
+on:
+  workflow_dispatch:
+  workflow_call:
+jobs:
+  Build:
+    name: Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [x64, arm64, armhf]
+    container: almalinux:9
+    steps:
+      - name: Install git
+        run: |
+          yum install -y git
+      - name: Check out repository code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: recursive
+      - name: Build
+        run: |
+          echo "prod_version=$(cat version.txt)" >> $GITHUB_ENV
+          scripts/yum-install.sh
+          make ARCH=${{ matrix.arch }}
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vscode-server_${{ env.prod_version }}_${{ matrix.arch }}
+          path: ${{ github.workspace }}/dist/vscode-server_${{ env.prod_version }}_${{ matrix.arch }}.tar.gz
