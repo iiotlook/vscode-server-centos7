@@ -1,0 +1,7 @@
+[submodule "libfastjson"]
+	path = libfastjson
+	url = https://github.com/rsyslog/libfastjson
+
+[submodule "libpatchelf/patchelf"]
+	path = libpatchelf/patchelf
+	url = https://github.com/NixOS/patchelf

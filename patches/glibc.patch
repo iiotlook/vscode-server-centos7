@@ -1,0 +1,53 @@
+diff --git a/elf/dl-load.c b/elf/dl-load.c
+index f905578a..9d872a2f 100644
+--- a/elf/dl-load.c
++++ b/elf/dl-load.c
+@@ -107,13 +107,38 @@ enum { ncapstr = 1, max_capstrlen = 0 };
+    gen-trusted-dirs.awk.  */
+ #include "trusted-dirs.h"
+ 
+-static const char system_dirs[] = SYSTEM_DIRS;
+-static const size_t system_dirs_len[] =
++static char system_dirs[PATH_MAX] = SYSTEM_DIRS;
++static size_t system_dirs_len[] =
+ {
+   SYSTEM_DIRS_LEN
+ };
+ #define nsystem_dirs_len array_length (system_dirs_len)
+ 
++#ifdef SHARED
++__attribute__((unused)) static void
++update_system_dirs (void)
++{
++  if (!_dl_rtld_map.l_libname || _dl_rtld_map.l_libname->name[0] != '/')
++    return;
++
++  char *p, *q, *libdir = strdupa (_dl_rtld_map.l_libname->name);
++  for (p = q = libdir; *p; p++)
++    {
++      if (*p == '/')
++       q = p;
++    }
++  q[1] = '\0';
++
++  size_t libdir_len = strlen (libdir);
++
++  if (!libdir_len || libdir_len + 1 > PATH_MAX)
++    return;
++
++   memcpy (system_dirs, libdir, libdir_len + 1);
++   system_dirs_len[0] = libdir_len;
++}
++#endif
++
+ static bool
+ is_trusted_path_normalize (const char *path, size_t len)
+ {
+@@ -690,6 +715,7 @@ _dl_init_paths (const char *llp, const char *source,
+      directories addressed by the LD_LIBRARY_PATH environment variable.  */
+ 
+ #ifdef SHARED
++  update_system_dirs();
+   /* Get the capabilities.  */
+   capstr = _dl_important_hwcaps (glibc_hwcaps_prepend, glibc_hwcaps_mask,
+                                 &ncapstr, &max_capstrlen);
