@@ -30,3 +30,30 @@ jobs:
         with:
           name: vscode-server_${{ env.prod_version }}_${{ matrix.arch }}
           path: ${{ github.workspace }}/dist/vscode-server_${{ env.prod_version }}_${{ matrix.arch }}.tar.gz
+
+  Test:
+    name: Smoke Tests
+    runs-on: ubuntu-latest
+    needs: Build
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: recursive
+      - name: Read product version
+        run: |
+          echo "prod_version=$(cat version.txt)" >> $GITHUB_ENV
+      - name: Download production artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ github.workspace }}/dist/
+          merge-multiple: true
+      - name: Run tests
+        run: |
+          tests/smoke_tests.sh '${{ env.prod_version }}' 'dist/vscode-server_${{ env.prod_version }}_x64.tar.gz'
+      - name: Archive test logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke_test_logs
+          path: tests/logs
