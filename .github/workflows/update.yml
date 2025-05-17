@@ -3,51 +3,83 @@ run-name: Update
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 8 * * *"
+    - cron: "0 8,20 * * *"
 jobs:
-  Check-Updates:
+  Update-Dependencies:
     permissions:
+      contents: write
+      pull-requests: write
       issues: write
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
           submodules: recursive
-      - name: Check updates
+      - name: Update dependencies
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          set -eu
-          title='[BOT] Update Dependencies'
-          message=''
+          git config user.name 'GitHub Actions'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git pull
+          git branch -D bot 2>/dev/null || true
+          git checkout -b bot
 
-          if [ "$(gh issue list --json 'id' --jq length --state 'open' --search "${title}")" != '0' ]; then
-            echo 'Issue already exists, skipping...'
-            exit 0
+          has_updates=0
+
+          git submodule update --remote
+
+          if [ -n "$(git diff libfastjson)" ]; then
+            has_updates=1
+            commitid=$(cd libfastjson && git rev-parse --short HEAD)
+            git add libfastjson
+            git commit -m "chore: Update submodule libfastjson to $commitid"
           fi
 
-          pushd ./libfastjson
-          git fetch origin
-          if [ $(git rev-parse --verify origin/master) != $(git rev-parse --verify HEAD) ]; then
-            message="${message}- libfastjson is outdated"$'\n'
+          if [ -n "$(git diff libpatchelf/patchelf)" ]; then
+            has_updates=1
+            commitid=$(cd libpatchelf/patchelf && git rev-parse --short HEAD)
+            git add libpatchelf/patchelf
+            git commit -m "chore: Update submodule patchelf to $commitid"
           fi
-          popd
 
-          pushd ./libpatchelf/patchelf
-          git fetch origin
-          if [ $(git rev-parse --verify origin/master) != $(git rev-parse --verify HEAD) ]; then
-            message="${message}- patchelf is outdated"$'\n'
-          fi
-          popd
+          bump_msg=$(scripts/update-deps.py)
 
-          scripts/update-deps.py
           if [ -n "$(git diff scripts/deps.sh)" ]; then
-            message="${message}- \`scripts/deps.sh\` is outdated"$'\n'
+            has_updates=1
+            git add scripts/deps.sh version.txt
+            git commit -m "chore: $bump_msg"
           fi
 
-          if [ -n "${message}" ]; then
-            owner="$(gh repo view --json 'owner' --jq '.owner.login')"
-            gh issue create --assignee "${owner}" --title "${title}" --body "${message}"
+          if [ "$has_updates" -ne 0 ]; then
+            echo "has_updates=1" >> $GITHUB_ENV
+            git push --force -u origin bot
+          fi
+      - name: Open PR
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        if: ${{ env.has_updates }}
+        run: |
+            pr_url=$(gh pr create --head bot --base master --title "[BOT] Update dependencies" --body "Update dependencies")
+            echo "pr_url=$pr_url" >> $GITHUB_ENV
+      - name: Lable PR
+        env:
+          GITHUB_TOKEN: ${{ secrets.pr_token }}
+        if: ${{ env.pr_url }}
+        run: |
+          gh pr edit '${{ env.pr_url }}' --add-label bot
+      - name: Create issue on failure
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          message="[BOT] Job ${{github.job}} is failling"
+          owner="$(gh repo view --json 'owner' --jq '.owner.login')"
+          len=$(gh issue list --json 'id' --jq length --state 'open' \
+                --search "$message")
+          if [ "$len" = '0' ]; then
+              gh issue create --assignee "${owner}" \
+                  --title "$message" \
+                  --body "$message"
           fi

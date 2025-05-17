@@ -3,7 +3,11 @@ import hashlib
 import json
 import os
 import re
+import sys
 import urllib.request
+
+def eprint(msg):
+    sys.stderr.write("%s\n" % (msg,))
 
 
 def get_latest(url, pattern):
@@ -92,6 +96,16 @@ def get_latest_mpfr_tar():
     return ver, url + tarname
 
 
+def get_current_vscode_prod_ver():
+    prod_ver = None
+    version_txt_path = os.path.join(os.path.dirname(__file__), "../version.txt")
+    if os.path.isfile(version_txt_path):
+        fo = open(version_txt_path, "r")
+        prod_ver = fo.read().strip()
+        fo.close()
+    return prod_ver
+
+
 def update_latest_vscode_prod_ver():
     url = 'https://update.code.visualstudio.com/api/releases/stable'
     res = urllib.request.urlopen(url)
@@ -102,11 +116,18 @@ def update_latest_vscode_prod_ver():
     fo = open(version_txt_path, "w")
     fo.write(str(prod_ver).strip() + "\n")
     fo.close()
+    return prod_ver
+
+
+def update_dict_add(d, name, old_ver, new_ver):
+    if old_ver != new_ver:
+        d[name] = new_ver, new_ver
 
 
 def update_deps_info():
     verdict = {}
     latest = {}
+    updict = {}
     deps_path = os.path.join(os.path.dirname(__file__), "deps.sh")
     if os.path.exists(deps_path):
         fo = open(deps_path, "r")
@@ -120,62 +141,69 @@ def update_deps_info():
             verdict[k] = v
         fo.close()
 
-    print('updating binutils...')
+    eprint('updating binutils...')
     latest['binutils_filename'] = "binutils-src.tar.xz"
     latest['binutils_version'], latest['binutils_url'] = get_latest_binutils_tar()
     latest['binutils_sha256'] = verdict['binutils_sha256'] if verdict.get('binutils_version') == latest['binutils_version'] else get_sha256(latest['binutils_url'])
+    update_dict_add(updict, 'binutils', verdict.get('binutils_version'), latest['binutils_version'])
 
-    print('updating gcc...')
+    eprint('updating gcc...')
     latest['gcc_filename'] = "gcc-src.tar.xz"
     latest['gcc_version'], latest['gcc_url'] = get_latest_gcc_tar()
     latest['gcc_sha256'] = verdict['gcc_sha256'] if verdict.get('gcc_version') == latest['gcc_version'] else get_sha256(latest['gcc_url'])
+    update_dict_add(updict, 'gcc', verdict.get('gcc_version'), latest['gcc_version'])
 
-    print('updating glibc...')
+    eprint('updating glibc...')
     latest['glibc_filename'] = "glibc-src.tar.xz"
     latest['glibc_version'], latest['glibc_url'] = get_latest_glibc_tar()
     latest['glibc_sha256'] = verdict['glibc_sha256'] if verdict.get('glibc_version') == latest['glibc_version'] else get_sha256(latest['glibc_url'])
+    update_dict_add(updict, 'glibc', verdict.get('glibc_version'), latest['glibc_version'])
 
-    print('updating gmp...')
+    eprint('updating gmp...')
     latest['gmp_filename'] = "gmp-src.tar.xz"
     latest['gmp_version'], latest['gmp_url'] = get_latest_gmp_tar()
     latest['gmp_sha256'] = verdict['gmp_sha256'] if verdict.get('gmp_version') == latest['gmp_version'] else get_sha256(latest['gmp_url'])
+    update_dict_add(updict, 'gmp', verdict.get('gmp_version'), latest['gmp_version'])
 
-    print('updating linux...')
+    eprint('updating linux...')
     latest['linux_filename'] = "linux-src.tar.xz"
     latest['linux_version'], latest['linux_url'] = get_latest_linux_tar()
     latest['linux_sha256'] = verdict['linux_sha256'] if verdict.get('linux_version') == latest['linux_version'] else get_sha256(latest['linux_url'])
+    update_dict_add(updict, 'linux', verdict.get('linux_version'), latest['linux_version'])
 
-    print('updating mpc...')
+    eprint('updating mpc...')
     latest['mpc_filename'] = "mpc-src.tar.gz"
     latest['mpc_version'], latest['mpc_url'] = get_latest_mpc_tar()
     latest['mpc_sha256'] = verdict['mpc_sha256'] if verdict.get('mpc_version') == latest['mpc_version'] else get_sha256(latest['mpc_url'])
+    update_dict_add(updict, 'mpc', verdict.get('mpc_version'), latest['mpc_version'])
 
-    print('updating mpfr...')
+    eprint('updating mpfr...')
     latest['mpfr_filename'] = "mpfr-src.tar.xz"
     latest['mpfr_version'], latest['mpfr_url'] = get_latest_mpfr_tar()
     latest['mpfr_sha256'] = verdict['mpfr_sha256'] if verdict.get('mpfr_version') == latest['mpfr_version'] else get_sha256(latest['mpfr_url'])
+    update_dict_add(updict, 'mpfr', verdict.get('mpfr_version'), latest['mpfr_version'])
 
-    print('updating vscode_cli_arm64...')
+    eprint('updating vscode_cli_arm64...')
     latest['vscode_cli_arm64_filename'] = "vscode-cli-arm64.tar.gz"
     latest['vscode_cli_arm64_version'], latest['vscode_cli_arm64_url'], latest['vscode_cli_arm64_sha256'] = get_latest_vscode('cli-linux-arm64')
 
-    print('updating vscode_cli_armhf...')
+    eprint('updating vscode_cli_armhf...')
     latest['vscode_cli_armhf_filename'] = "vscode-cli-armhf.tar.gz"
     latest['vscode_cli_armhf_version'], latest['vscode_cli_armhf_url'], latest['vscode_cli_armhf_sha256'] = get_latest_vscode('cli-linux-armhf')
 
-    print('updating vscode_cli_x64...')
+    eprint('updating vscode_cli_x64...')
     latest['vscode_cli_x64_filename'] = "vscode-cli-x64.tar.gz"
     latest['vscode_cli_x64_version'], latest['vscode_cli_x64_url'], latest['vscode_cli_x64_sha256'] = get_latest_vscode('cli-linux-x64')
 
-    print('updating vscode_server_arm64...')
+    eprint('updating vscode_server_arm64...')
     latest['vscode_server_arm64_filename'] = "vscode-srv-arm64.tar.gz"
     latest['vscode_server_arm64_version'], latest['vscode_server_arm64_url'], latest['vscode_server_arm64_sha256'] = get_latest_vscode('server-linux-arm64')
 
-    print('updating vscode_server_armhf...')
+    eprint('updating vscode_server_armhf...')
     latest['vscode_server_armhf_filename'] = "vscode-srv-armhf.tar.gz"
     latest['vscode_server_armhf_version'], latest['vscode_server_armhf_url'], latest['vscode_server_armhf_sha256'] = get_latest_vscode('server-linux-armhf')
 
-    print('updating vscode_server_x64...')
+    eprint('updating vscode_server_x64...')
     latest['vscode_server_x64_filename'] = "vscode-srv-x64.tar.gz"
     latest['vscode_server_x64_version'], latest['vscode_server_x64_url'], latest['vscode_server_x64_sha256'] = get_latest_vscode('server-linux-x64')
 
@@ -184,8 +212,17 @@ def update_deps_info():
         fo.write("%s=%s\n" % (k, latest[k]))
     fo.close()
 
-    print('updating vscode product version...')
-    update_latest_vscode_prod_ver()
+    eprint('updating vscode product version...')
+    old_vscode_ver = get_current_vscode_prod_ver()
+    new_vscode_ver = update_latest_vscode_prod_ver()
+    update_dict_add(updict, 'vscode', old_vscode_ver, new_vscode_ver)
+
+    msg_list = []
+    for name, (old_ver, new_ver) in updict.items():
+        msg_list.append("Bump %s version to %s" % (name, new_ver))
+    if msg_list:
+        eprint("------\n")
+        print("; ".join(msg_list))
 
 
 def main():

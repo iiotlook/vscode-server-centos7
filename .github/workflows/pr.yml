@@ -1,0 +1,58 @@
+name: PR
+run-name: PR
+on:
+  pull_request:
+    types: [opened, reopened, labeled, synchronize]
+jobs:
+  CI:
+    uses: ./.github/workflows/ci.yml
+
+  Auto-Merge:
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    needs: CI
+    outputs:
+      auto_release: ${{ steps.auto-merge.outputs.auto_release }}
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Auto-merge
+        id: auto-merge
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          prnum=$(jq --raw-output '.pull_request.number' "$GITHUB_EVENT_PATH")
+          author=$(gh pr view "$prnum" --json 'author' --jq '.author.login')
+
+          git fetch --depth=1 origin master
+          git fetch --depth=10 origin bot || exit 0
+          if [ "$author" == "app/github-actions" ] && [ "$GITHUB_WORKFLOW_SHA" == "$(git rev-parse FETCH_HEAD)" ]; then
+            git checkout master
+            git merge origin/bot
+            git push
+          fi
+
+          if git log -1 --pretty="format:" --name-only | grep -q '^version.txt$'; then
+            echo "auto_release=1" >> "$GITHUB_OUTPUT"
+          fi
+
+  Auto-Release:
+    permissions:
+      actions: write
+    runs-on: ubuntu-latest
+    needs: Auto-Merge
+    if: ${{ needs.Auto-Merge.outputs.auto_release }}
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Auto-release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run release.yml
