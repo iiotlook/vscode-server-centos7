@@ -30,14 +30,16 @@ jobs:
 
           git fetch --depth=1 origin master
           git fetch --depth=10 origin bot || exit 0
+          echo "AUTHOR: $author"
+          echo "GITHUB_WORKFLOW_SHA: $GITHUB_WORKFLOW_SHA"
+          echo "FETCH_HEAD: $(git rev-parse FETCH_HEAD)"
           if [ "$author" == "app/github-actions" ] && [ "$GITHUB_WORKFLOW_SHA" == "$(git rev-parse FETCH_HEAD)" ]; then
             git checkout master
             git merge origin/bot
             git push
-          fi
-
-          if git log -1 --pretty="format:" --name-only | grep -q '^version.txt$'; then
-            echo "auto_release=1" >> "$GITHUB_OUTPUT"
+            if git log -1 --pretty="format:" --name-only | grep -q '^version.txt$'; then
+              echo "auto_release=1" >> "$GITHUB_OUTPUT"
+            fi
           fi
 
   Auto-Release:
