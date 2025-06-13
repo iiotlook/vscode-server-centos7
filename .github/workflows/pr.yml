@@ -27,13 +27,14 @@ jobs:
         run: |
           prnum=$(jq --raw-output '.pull_request.number' "$GITHUB_EVENT_PATH")
           author=$(gh pr view "$prnum" --json 'author' --jq '.author.login')
+          prsha='${{ github.event.pull_request.head.sha }}'
 
           git fetch --depth=1 origin master
           git fetch --depth=10 origin bot || exit 0
           echo "AUTHOR: $author"
-          echo "GITHUB_WORKFLOW_SHA: $GITHUB_WORKFLOW_SHA"
+          echo "PRSHA: $prsha"
           echo "FETCH_HEAD: $(git rev-parse FETCH_HEAD)"
-          if [ "$author" == "app/github-actions" ] && [ "$GITHUB_WORKFLOW_SHA" == "$(git rev-parse FETCH_HEAD)" ]; then
+          if [ "$author" == "app/github-actions" ] && [ "$prsha" == "$(git rev-parse FETCH_HEAD)" ]; then
             git checkout master
             git merge origin/bot
             git push
