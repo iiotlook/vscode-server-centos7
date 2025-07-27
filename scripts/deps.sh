@@ -1,7 +1,7 @@
 binutils_filename=binutils-src.tar.xz
-binutils_sha256=ce2017e059d63e67ddb9240e9d4ec49c2893605035cd60e92ad53177f4377237
-binutils_url=https://ftp.gnu.org/gnu/binutils/binutils-2.44.tar.xz
-binutils_version=2.44
+binutils_sha256=c50c0e7f9cb188980e2cc97e4537626b1672441815587f1eab69d2a1bfbef5d2
+binutils_url=https://ftp.gnu.org/gnu/binutils/binutils-2.45.tar.xz
+binutils_version=2.45
 gcc_filename=gcc-src.tar.xz
 gcc_sha256=e2b09ec21660f01fecffb715e0120265216943f038d0e48a9868713e54f06cea
 gcc_url=https://ftp.gnu.org/gnu/gcc/gcc-15.1.0/gcc-15.1.0.tar.xz
