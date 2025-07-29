@@ -66,9 +66,11 @@ def get_latest_gcc_tar():
 
 
 def get_latest_glibc_tar():
-    url = 'https://ftp.gnu.org/gnu/glibc/'
-    ver, tarname = get_latest(url, r'glibc-([0-9]+(:?\.[0-9]+)+).tar.xz')
-    return ver, url + tarname
+    # Pin glibc version to 2.41 temporarily
+    return "2.41", "https://ftp.gnu.org/gnu/glibc/glibc-2.41.tar.xz"
+    # url = 'https://ftp.gnu.org/gnu/glibc/'
+    # ver, tarname = get_latest(url, r'glibc-([0-9]+(:?\.[0-9]+)+).tar.xz')
+    # return ver, url + tarname
 
 
 def get_latest_gmp_tar():
