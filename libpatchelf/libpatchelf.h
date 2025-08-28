@@ -10,6 +10,10 @@ int patchelf_get_interpreter(const char *filename, char *interpreter,
 
 int patchelf_set_interpreter(const char *filename, const char *filename_new,
                              const char *interpreter, int print_err);
+
+int patchelf_set_rpath(const char *filename, const char *filename_new,
+                      const char *rpath, int print_err);
+
 #ifdef __cplusplus
 }
 #endif

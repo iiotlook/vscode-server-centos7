@@ -338,14 +338,29 @@ static int patch_file(const char *fpath, const struct stat *sb)
     if (patchelf_set_interpreter(fpath, tmppath, glibc_interp_new, TRUE)) {
         goto end;
     }
+    // 新增 rpath patch
+    char tmprpath[PATH_MAX];
+    siz = snprintf(tmprpath, PATH_MAX, "%s/.%s%s.rpath", dname, fname, TMPEXT);
+    if (siz < 0 || siz >= PATH_MAX) {
+        errno = ENAMETOOLONG;
+        E("snprintf tmprpath(): %s", fpath);
+        goto end;
+    }
+    char rpath_dir[PATH_MAX];
+    strncpy(rpath_dir, glibc_interp_new, sizeof(rpath_dir));
+    char *last_slash = strrchr(rpath_dir, '/');
+    if (last_slash) { *last_slash = '\0'; }
+    if (patchelf_set_rpath(tmppath, tmprpath, rpath_dir, TRUE)) {
+        goto end;
+    }
 
     if (rename(fpath, bakpath) < 0) {
         E("rename(): %s => %s", fpath, bakpath);
         goto end;
     }
 
-    if (rename(tmppath, fpath) < 0) {
-        E("rename(): %s => %s", tmppath, fpath);
+    if (rename(tmprpath, fpath) < 0) {
+        E("rename(): %s => %s", tmprpath, fpath);
         goto end;
     }
 
