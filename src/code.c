@@ -331,14 +331,9 @@ static int patch_file(const char *fpath, const struct stat *sb)
         goto end;
     }
 
-    if (strncmp(glibc_interp, interpreter, PATH_MAX) != 0) {
-        // same interpreter
-        ret = 1;
-        goto end;
-    }
-
+    // 无论原 interpreter 路径是什么，都强制 patch
     errno = 0;
-    E("Patching %s ...", fpath);
+    E("Patching %s (interpreter: %s) ...", fpath, interpreter);
 
     if (patchelf_set_interpreter(fpath, tmppath, glibc_interp_new, TRUE)) {
         goto end;
