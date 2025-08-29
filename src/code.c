@@ -766,6 +766,12 @@ static int patch_now(void)
         E("fork()");
         return EXIT_FAILURE;
     } else if (child == 0) {
+        // 自动注入 LD_LIBRARY_PATH
+        char rpath_dir[PATH_MAX];
+        strncpy(rpath_dir, glibc_interp_new, sizeof(rpath_dir));
+        char *last_slash = strrchr(rpath_dir, '/');
+        if (last_slash) { *last_slash = '\0'; }
+        setenv("LD_LIBRARY_PATH", rpath_dir, 1);
         execv(realcli_path, argv);
         E("execv(): %s", realcli_path);
         _exit(EXIT_FAILURE);
